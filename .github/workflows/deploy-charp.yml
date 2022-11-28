@@ -1,0 +1,65 @@
+name: Deploy C# CodeAnalysis
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - csharp/**
+
+jobs:
+  pack-n-push:
+    name: "Pack'n'Push"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Fetch tags
+        shell: bash
+        run: git fetch --tags
+
+      - name: Increment Patch version
+        shell: bash
+        run: |
+          last_version=$(\
+            (ls .git/refs/tags/ --almost-all --format single-column -1 2>/dev/null | grep ^csharp_ || echo "csharp_0") \
+              | egrep -o [0-9]+ \
+              | tail -n 1 \
+            )
+          new_version=$(expr $last_version + 1)
+          git tag csharp_$new_version
+          git push --tags
+          echo "PATCH_VERSION=$new_version" >> $GITHUB_ENV
+      - name: Pack
+        run: |
+          for csproj in ./csharp/*/*.csproj
+          do 
+            dotnet pack $csproj \
+              -p:PatchVersion=$PATCH_VERSION \
+              --verbosity detailed \
+              --nologo \
+              --configuration Release \
+              --include-symbols \
+              --include-source \
+              --output ./out/
+          done
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: nupkg
+          path: ./out/*.nupkg
+
+      - name: GitHub Package Registry Tool Install
+        run: dotnet tool install --global --verbosity minimal --no-cache gpr
+
+      - name: Publish artifacts
+        run: |
+          gpr push \
+            --api-key $GITHUB_TOKEN \
+            --repository ${{ github.repository }} \
+            --retries 1 \
+            ./out/*.nupkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
