@@ -55,4 +55,9 @@ jobs:
         run: dotnet tool install --global --verbosity minimal --no-cache gpr
 
       - name: Push to GitHub package registry
-        run: dotnet nuget push ./src/Project/out/*.nupkg --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate --no-symbols true
+        run: |
+          dotnet nuget push ./out/*.nupkg \
+          --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json \
+          --api-key ${{ secrets.GITHUB_TOKEN }} \
+          --skip-duplicate \
+          --no-symbols true
