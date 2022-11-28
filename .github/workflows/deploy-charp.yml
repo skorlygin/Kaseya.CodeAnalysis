@@ -54,12 +54,5 @@ jobs:
       - name: GitHub Package Registry Tool Install
         run: dotnet tool install --global --verbosity minimal --no-cache gpr
 
-      - name: Publish artifacts
-        run: |
-          gpr push \
-            --api-key $GITHUB_TOKEN \
-            --repository ${{ github.repository }} \
-            --retries 1 \
-            ./out/*.nupkg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push to GitHub package registry
+        run: dotnet nuget push ./src/Project/out/*.nupkg --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate --no-symbols true
